@@ -7,17 +7,22 @@ import {
   GameState,
   Hand,
   GameResult,
+  Result,
 } from "./types";
 
 //UI Elements
 const CardBackImage = () => (
-  <img src={process.env.PUBLIC_URL + `/SVG-cards/png/1x/back.png`} />
+  <img
+    alt="back of card"
+    src={process.env.PUBLIC_URL + `/SVG-cards/png/1x/back.png`}
+  />
 );
 
 const CardImage = ({ suit, rank }: Card) => {
   const card = rank === CardRank.Ace ? 1 : rank;
   return (
     <img
+      alt={rank + " card"}
       src={
         process.env.PUBLIC_URL +
         `/SVG-cards/png/1x/${suit.slice(0, -1)}_${card}.png`
@@ -57,19 +62,89 @@ const setupGame = (): GameState => {
   };
 };
 
+const extractCardScore = (rank: string, acc: number): number => {
+  switch (rank) {
+    case CardRank.King:
+    case CardRank.Queen:
+    case CardRank.Jack:
+      return 10;
+    case CardRank.Ace:
+      return 21 - acc <= 11 ? 1 : 11; // TODO: Make this variable so that aces can dynamically change between 1 and 11
+    default:
+      return 0;
+  }
+};
+
 //Scoring
 const calculateHandScore = (hand: Hand): number => {
-  return 0;
+  const score = hand.reduce((acc, curCard) => {
+    let cardValue = parseInt(curCard.rank);
+    // if cardValue = NaN
+    if (!cardValue) {
+      cardValue = extractCardScore(curCard.rank, acc);
+    }
+    return acc + cardValue;
+  }, 0);
+  return score;
+};
+
+const isBlackjack = (hand: Hand) => {
+  return (
+    hand.length === 2 &&
+    calculateHandScore(hand) === 21 &&
+    hand.find((card) => card.rank === CardRank.Ace)
+  );
 };
 
 const determineGameResult = (state: GameState): GameResult => {
-  return "no_result";
+  const { dealerHand, playerHand } = state;
+
+  const playerScore = calculateHandScore(playerHand);
+  const dealerScore = calculateHandScore(dealerHand);
+
+  // going bust
+  if (playerScore > 21) {
+    return Result.DEALER_WIN;
+  }
+  if (dealerScore > 21) {
+    return Result.PLAYER_WIN;
+  }
+
+  // simple victory
+  if (dealerScore > playerScore) {
+    return Result.DEALER_WIN;
+  }
+  if (playerScore > dealerScore) {
+    return Result.PLAYER_WIN;
+  }
+
+  const isEqualScore = playerScore === dealerScore;
+  if (isEqualScore) {
+    const isPlayerBlackjack = isBlackjack(playerHand);
+    const isDealerBlackjack = isBlackjack(dealerHand);
+    if (isPlayerBlackjack && isDealerBlackjack) return Result.DRAW;
+    if (isDealerBlackjack) return Result.DEALER_WIN;
+    if (isPlayerBlackjack) return Result.PLAYER_WIN;
+    return Result.DRAW;
+  }
+
+  return Result.NO_RESULT;
 };
 
 //Player Actions
 const playerStands = (state: GameState): GameState => {
+  let tempState = { ...state }; // shallow copy so as not to mutate
+  const isDealerLowScore = calculateHandScore(state.dealerHand) <= 16;
+  if (isDealerLowScore) {
+    const { card, remaining } = takeCard(state.cardDeck);
+    tempState = {
+      ...tempState,
+      cardDeck: remaining,
+      dealerHand: [...tempState.dealerHand, card],
+    };
+  }
   return {
-    ...state,
+    ...tempState,
     turn: "dealer_turn",
   };
 };
@@ -123,7 +198,7 @@ const Game = (): JSX.Element => {
         </div>
       )}
       {state.turn === "dealer_turn" &&
-      determineGameResult(state) != "no_result" ? (
+      determineGameResult(state) !== Result.NO_RESULT ? (
         <p>{determineGameResult(state)}</p>
       ) : (
         <p>{state.turn}</p>

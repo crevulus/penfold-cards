@@ -21,7 +21,14 @@ export enum CardRank {
   King = "king",
 }
 
-export type GameResult = "no_result" | "player_win" | "dealer_win" | "draw";
+export enum Result {
+  NO_RESULT = "no_result",
+  PLAYER_WIN = "player_win",
+  DEALER_WIN = "dealer_win",
+  DRAW = "draw",
+}
+
+export type GameResult = `${Result}`;
 
 export type Turn = "player_turn" | "dealer_turn";
 
