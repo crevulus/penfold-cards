@@ -69,7 +69,7 @@ const extractCardScore = (rank: string, acc: number): number => {
     case CardRank.Jack:
       return 10;
     case CardRank.Ace:
-      return 21 - acc <= 11 ? 1 : 11; // TODO: Make this variable so that aces can dynamically change between 1 and 11
+      return 1; // TODO: Make this variable so that aces can dynamically change between 1 and 11
     default:
       return 0;
   }
@@ -77,15 +77,19 @@ const extractCardScore = (rank: string, acc: number): number => {
 
 //Scoring
 const calculateHandScore = (hand: Hand): number => {
+  let aceCount = 0;
   const score = hand.reduce((acc, curCard) => {
     let cardValue = parseInt(curCard.rank);
+    if (curCard.rank === CardRank.Ace) {
+      aceCount++;
+    }
     // if cardValue = NaN
     if (!cardValue) {
       cardValue = extractCardScore(curCard.rank, acc);
     }
     return acc + cardValue;
   }, 0);
-  return score;
+  return score <= 11 && aceCount > 0 ? score + 10 : score;
 };
 
 const isBlackjack = (hand: Hand) => {
@@ -103,6 +107,9 @@ const determineGameResult = (state: GameState): GameResult => {
   const dealerScore = calculateHandScore(dealerHand);
 
   // going bust
+  if (playerScore > 21 && dealerScore > 21) {
+    return Result.DRAW;
+  }
   if (playerScore > 21) {
     return Result.DEALER_WIN;
   }
@@ -134,8 +141,7 @@ const determineGameResult = (state: GameState): GameResult => {
 //Player Actions
 const playerStands = (state: GameState): GameState => {
   let tempState = { ...state }; // shallow copy so as not to mutate
-  const isDealerLowScore = calculateHandScore(state.dealerHand) <= 16;
-  if (isDealerLowScore) {
+  while (calculateHandScore(tempState.dealerHand) <= 16) {
     const { card, remaining } = takeCard(state.cardDeck);
     tempState = {
       ...tempState,

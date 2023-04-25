@@ -88,14 +88,19 @@ describe("The player actions", () => {
   test("When the player 'Stands' and the dealer has a score of 16 or less then the dealer must take another card", () => {
     const initialGameState = setupGame();
     initialGameState.dealerHand = [
-      { suit: CardSuit.Clubs, rank: CardRank.Ten },
-      { suit: CardSuit.Clubs, rank: CardRank.Six },
+      { suit: CardSuit.Clubs, rank: CardRank.Eight },
+      { suit: CardSuit.Clubs, rank: CardRank.Two },
+    ];
+    initialGameState.cardDeck = [
+      ...initialGameState.cardDeck,
+      { suit: CardSuit.Clubs, rank: CardRank.Four },
+      { suit: CardSuit.Clubs, rank: CardRank.Four },
     ];
 
     const newGameState = playerStands(initialGameState);
 
     expect(newGameState.dealerHand.length).toBe(
-      initialGameState.dealerHand.length + 1
+      initialGameState.dealerHand.length + 2
     );
   });
 
